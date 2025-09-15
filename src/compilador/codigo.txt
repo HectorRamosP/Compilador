@@ -1,0 +1,29 @@
+func main() {
+    var y float64
+    var y float64
+    var mensaje string
+    var activo bool
+    var valido bool
+
+    x = jajaja
+    y = 3.5 * 2.0
+    mensaje = "Iniciando..."
+
+    activo = true
+    valido = false
+
+    fmt.Println(mensaje)
+
+    if activo && valido || !(x == 10) {
+        fmt.Println("Condición compuesta verdadera")
+    } else {
+        fmt.Println("Condición compuesta falsa")
+    }
+
+    for x < 15 && y >= 7.0 {
+        fmt.Println("Iterando x:", x)
+        x = x + 1
+        y = y - 0.5
+    }
+    fmt.Println("Programa finalizado.")
+}
