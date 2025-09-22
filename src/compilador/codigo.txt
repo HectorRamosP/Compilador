@@ -1,11 +1,12 @@
 func main() {
-    var y float64
+    var x float64
+    var x string
     var y float64
     var mensaje string
     var activo bool
     var valido bool
 
-    x = jajaja
+    a = "Hola"
     y = 3.5 * 2.0
     mensaje = "Iniciando..."
 
