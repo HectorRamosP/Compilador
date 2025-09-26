@@ -1,24 +1,29 @@
 func main() {
     var x float64
-    var x string
+    var a int
     var y float64
-    var mensaje string
     var activo bool
     var valido bool
+    var numero float64
+    var resultado int
+    var mensaje string
 
-    a = "Hola"
+   
+    numero = 3.1416
+
+    a = 7
     y = 3.5 * 2.0
-    mensaje = "Iniciando..."
 
     activo = true
     valido = false
 
-    fmt.Println(mensaje)
-
     if activo && valido || !(x == 10) {
-        fmt.Println("Condición compuesta verdadera")
+        fmt.Println("Condición compuesta verdadera", numero)
     } else {
         fmt.Println("Condición compuesta falsa")
+    }
+
+    for mensaje {
     }
 
     for x < 15 && y >= 7.0 {

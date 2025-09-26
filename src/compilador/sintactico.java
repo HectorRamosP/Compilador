@@ -32,7 +32,9 @@ public class sintactico {
       {"se espera if", "523"},
       {"se espera operador relacional", "524"},
       {"variable no declarada", "600"},
-      {"la variable ya fue declarada", "601"}
+      {"la variable ya fue declarada", "601"},
+      {"Incompatibilidad de tipos", "602"},
+      {"La condicion debe ser de tipo booleano", "603"}
     };
 
     public sintactico(nodo cabeza) {
@@ -61,6 +63,11 @@ public class sintactico {
             }
         }
         errorEncontrado = true;
+        errorSintacticoEncontrado = true;
+    }
+    
+    private void imprimirErrorSemantico(String mensaje, int renglon) {
+        System.out.println("Error Semantico 602: Incompatibilidad de tipos. " + mensaje + ". Linea " + renglon);
         errorSintacticoEncontrado = true;
     }
     
@@ -93,218 +100,351 @@ public class sintactico {
         }
     }
     
+    private String tipoAString(int tipoToken) {
+        switch (tipoToken) {
+            case MatrizTipos.T_INT: return "int";
+            case MatrizTipos.T_FLOAT64: return "float64";
+            case MatrizTipos.T_STRING: return "string";
+            case MatrizTipos.T_BOOL: return "bool";
+            default: return "desconocido";
+        }
+    }
+    
+    private int getTipoDeToken(nodo token) {
+        if (token == null) return MatrizTipos.T_ERROR;
+        switch (token.token) {
+            case 100: // Identificador
+                nodoVar v = buscarVariable(token.lexema);
+                if (v != null) {
+                    return v.tipo;
+                }
+                verificarVariableNoDeclarada(token.lexema, token.renglon);
+                return MatrizTipos.T_ERROR;
+            case 101: return MatrizTipos.T_INT;
+            case 102: return MatrizTipos.T_FLOAT64;
+            case 103: return MatrizTipos.T_STRING;
+            case 213: case 214: // true, false
+                return MatrizTipos.T_BOOL;
+            default:
+                return MatrizTipos.T_ERROR;
+        }
+    }
+
     private void sintaxis() {
-        if (p != null && p.token == 200) { // func
-            p = p.sig;
-            if (p != null && p.token == 201) { // main
-                p = p.sig;
-                if (p != null && p.token == 119) { // (
-                    p = p.sig;
-                    if (p != null && p.token == 120) { // )
-                        p = p.sig;
-                        if (p != null && p.token == 121) { // {
-                            p = p.sig;
-                            if (p != null) declaracion_var();
-                            if (p != null) instrucciones();
-                            if (p != null && p.token == 122) { // }
-                                p = p.sig;
+        if (p != null && p.token == 200) { p = p.sig;
+            if (p != null && p.token == 201) { p = p.sig;
+                if (p != null && p.token == 119) { p = p.sig;
+                    if (p != null && p.token == 120) { p = p.sig;
+                        if (p != null && p.token == 121) { p = p.sig;
+                            declaracion_var();
+                            instrucciones();
+                            if (p != null && p.token == 122) { p = p.sig;
                                 if (p != null) {
-                                    imprimirErrorSintactico(p, 501); // EOF inesperado
+                                    imprimirErrorSintactico(p, 501);
                                 }
                             } else {
-                                imprimirErrorSintactico(p, 513); // se espera '}'
+                                imprimirErrorSintactico(p, 513);
                             }
                         } else {
-                            imprimirErrorSintactico(p, 512); // se espera '{'
+                            imprimirErrorSintactico(p, 512);
                         }
                     } else {
-                        imprimirErrorSintactico(p, 511); // se espera ')'
+                        imprimirErrorSintactico(p, 511);
                     }
                 } else {
-                    imprimirErrorSintactico(p, 510); // se espera '('
+                    imprimirErrorSintactico(p, 510);
                 }
             } else {
-                imprimirErrorSintactico(p, 509); // se espera 'main'
+                imprimirErrorSintactico(p, 509);
             }
         } else {
-            imprimirErrorSintactico(p, 508); // se espera 'func'
+            imprimirErrorSintactico(p, 508);
         }
     }
-
-    private boolean tipo() {
-        if (p != null && (p.token == 203 || p.token == 204 || p.token == 205 || p.token == 206)) {
-            p = p.sig;
-            return true;
-        }
-        return false;
-    }
-
+    
     private void declaracion_var() {
-        while (p != null && p.token == 202) {  // 'var'
+        while (p != null && p.token == 202) {
             p = p.sig;
-            if (p != null && p.token == 100) {  
-                String nombreVar = p.lexema; 
+            if (p != null && p.token == 100) {
+                String nombreVar = p.lexema;
                 int renglonVar = p.renglon;
                 p = p.sig;
-                if (p != null) {
-                    int tipoToken = p.token;
-                    if (tipo()) {
-                        insertarVariable(nombreVar, tipoToken, renglonVar);
-                    } else {
-                        imprimirErrorSintactico(p, 516);  
-                        break;
-                    }
-                }
-                else {
-                    imprimirErrorSintactico(null, 516);
+                if (p != null && (p.token >= 203 && p.token <= 206)) {
+                    insertarVariable(nombreVar, p.token, renglonVar);
+                    p = p.sig;
+                } else {
+                    imprimirErrorSintactico(p, 516);
                     break;
                 }
             } else {
-                imprimirErrorSintactico(p, 515); 
+                imprimirErrorSintactico(p, 515);
                 break;
             }
         }
     }
-            
+    
     private void instrucciones() {
-        if (p != null && p.token == 122) {
-           imprimirErrorSintactico(p, 520);
-           return;
-        }
-        
-        while (p != null && p.token != 122) {  // Mientras no sea '}'
-            if (p.token == 100 || p.token == 207 || 
-                p.token == 209 || p.token == 210) {
+        while (p != null && p.token != 122) {
+            if (p.token == 100 || p.token == 207 || p.token == 209 || p.token == 210) {
                 instruccionInicial(p.token);
             } else {
                 imprimirErrorSintactico(p, 520);
-                // Avanzamos para evitar un bucle infinito si hay un token inesperado
-                p = p.sig; 
+                p = p.sig;
             }
         }
     }
 
     private void instruccionInicial(int token) {
         switch (token) {
-            case 100:  // Identificador (asignacion)
-                asignacion();
+            case 100: asignacion(); 
                 break;
-            case 210:  // fmt
-                instruccionFmt();
+            case 210: instruccionFmt(); 
                 break;
-            case 207:  // if
-                if_else();
+            case 207: if_else(); 
                 break;
-            case 209:  // for (while)
-                while_loop();
+            case 209: while_loop(); 
                 break;
             default:
-                imprimirErrorSintactico(p, 520); 
+                imprimirErrorSintactico(p, 520);
                 p = p.sig;
                 break;
-        }   
+        }
     }
 
     private void asignacion() {
-        if (p != null && p.token == 100){
-            String nombreVar = p.lexema;
-            if (buscarVariable(nombreVar) == null) {
-                System.out.println("Error Semantico 600: la variable '" + nombreVar + "' no ha sido declarada. Linea " + p.renglon);
-                errorSintacticoEncontrado = true;
-            }
+        int tipoVar = getTipoDeToken(p);
+        nodo varNode = p;
+        p = p.sig;
+        if (p != null && p.token == 127) { // '='
+            nodo opAsignacion = p;
             p = p.sig;
-            if(p != null && p.token == 127){
-                p = p.sig;
-                expresion();
-            }else{
-                imprimirErrorSintactico(p, 502);
-            }    
-        }else{
-            imprimirErrorSintactico(p, 515);
-        }
-    }
-
-    private void expresion() {
-        termino();
-        while(p != null && (p.token >= 104 && p.token <= 107)){
-            p = p.sig;
-            termino();
-        }
-    }
-    
-    private void termino() {
-        factor();
-        while (p != null && (p.token == 106 || p.token == 107)) { // * /
-            p = p.sig;
-            factor();
-        }
-    }
-
-    private void factor() {
-        if (p != null) {
-            if (p.token == 100) { // Identificador
-                if (buscarVariable(p.lexema) == null) {
-                    System.out.println("Error Semantico 600: la variable '" + p.lexema + "' no ha sido declarada. Linea " + p.renglon);
-                    errorSintacticoEncontrado = true;
+            int tipoExpr = expresion();
+            if (tipoVar != MatrizTipos.T_ERROR && tipoExpr != MatrizTipos.T_ERROR) {
+                int tipoFinal = MatrizTipos.verificar(opAsignacion.lexema, tipoVar, tipoExpr);
+                if (tipoFinal == MatrizTipos.T_ERROR) {
+                    String detalle = "No se puede asignar una expresion de tipo '" + tipoAString(tipoExpr) + "' a la variable '" + varNode.lexema + "' de tipo '" + tipoAString(tipoVar) + "'";
+                    imprimirErrorSemantico(detalle, varNode.renglon);
                 }
+            }
+        } else {
+            imprimirErrorSintactico(p, 502);
+        }
+    }
+
+    private int expresion() {
+        int tipoIzq = termino();
+        while (p != null && (p.token == 104 || p.token == 105)) { // + -
+            nodo operador = p;
+            p = p.sig;
+            int tipoDer = termino();
+            if (tipoIzq == MatrizTipos.T_ERROR || tipoDer == MatrizTipos.T_ERROR) return MatrizTipos.T_ERROR;
+            
+            int tipoResultante = MatrizTipos.verificar(operador.lexema, tipoIzq, tipoDer);
+            if (tipoResultante == MatrizTipos.T_ERROR) {
+                imprimirErrorSemantico("Operador '" + operador.lexema + "' no se puede aplicar a operandos de tipo '" + tipoAString(tipoIzq) + "' y '" + tipoAString(tipoDer) + "'", operador.renglon);
+                return MatrizTipos.T_ERROR;
+            }
+            tipoIzq = tipoResultante;
+        }
+        return tipoIzq;
+    }
+
+    private int termino() {
+        int tipoIzq = factor();
+        while (p != null && (p.token == 106 || p.token == 107)) { // * /
+            nodo operador = p;
+            p = p.sig;
+            int tipoDer = factor();
+            if (tipoIzq == MatrizTipos.T_ERROR || tipoDer == MatrizTipos.T_ERROR) return MatrizTipos.T_ERROR;
+
+            int tipoResultante = MatrizTipos.verificar(operador.lexema, tipoIzq, tipoDer);
+            if (tipoResultante == MatrizTipos.T_ERROR) {
+                imprimirErrorSemantico("Operador '" + operador.lexema + "' no se puede aplicar a operandos de tipo '" + tipoAString(tipoIzq) + "' y '" + tipoAString(tipoDer) + "'", operador.renglon);
+                return MatrizTipos.T_ERROR;
+            }
+            tipoIzq = tipoResultante;
+        }
+        return tipoIzq;
+    }
+
+    private int factor() {
+        if (p != null) {
+            if ((p.token >= 100 && p.token <= 103) || p.token == 213 || p.token == 214) {
+                int tipo = getTipoDeToken(p);
                 p = p.sig;
-            } else if (p.token == 101 || p.token == 102 || p.token == 103 || p.token == 213 || p.token == 214) { // Numero, cadena, true/false
-                p = p.sig;
+                return tipo;
             } else if (p.token == 119) { // '('
                 p = p.sig;
-                expresion();
-                if (p != null && p.token == 120) { // ')'
+                int tipo = expresion();
+                if (p != null && p.token == 120) {
                     p = p.sig;
                 } else {
                     imprimirErrorSintactico(p, 511);
                 }
+                return tipo;
             } else {
                 imprimirErrorSintactico(p, 522);
             }
         } else {
             imprimirErrorSintactico(null, 522);
         }
+        return MatrizTipos.T_ERROR;
+    }
+
+    private void if_else() {
+        p = p.sig;
+        condicion();
+        if (p != null && p.token == 121) {
+            p = p.sig;
+            instrucciones();
+            if (p != null && p.token == 122) {
+                p = p.sig;
+                if (p != null && p.token == 208) {
+                    p = p.sig;
+                    if (p != null && p.token == 121) {
+                        p = p.sig;
+                        instrucciones();
+                        if (p != null && p.token == 122) {
+                            p = p.sig;
+                        } else {
+                            imprimirErrorSintactico(p, 513);
+                        }
+                    } else {
+                        imprimirErrorSintactico(p, 512);
+                    }
+                }
+            } else {
+                imprimirErrorSintactico(p, 513);
+            }
+        } else {
+            imprimirErrorSintactico(p, 512);
+        }
+    }
+
+    private void while_loop() {
+        p = p.sig;
+        condicion();
+        if (p != null && p.token == 121) {
+            p = p.sig;
+            instrucciones();
+            if (p != null && p.token == 122) {
+                p = p.sig;
+            } else {
+                imprimirErrorSintactico(p, 513);
+            }
+        } else {
+            imprimirErrorSintactico(p, 512);
+        }
+    }
+
+    private void condicion() {
+        int tipoCond = expresion_logica();
+        if (tipoCond != MatrizTipos.T_BOOL && tipoCond != MatrizTipos.T_ERROR) {
+            System.out.println("Error Semantico 603: La condicion debe ser de tipo booleano, pero se recibio '" + tipoAString(tipoCond) + "'. Linea " + (p != null ? p.renglon : 0));
+            errorSintacticoEncontrado = true;
+        }
     }
     
+    private int expresion_logica() {
+        int tipoIzq = expresion_logica_simple();
+        while (p != null && (p.token == 114 || p.token == 115)) {
+            nodo operador = p;
+            p = p.sig;
+            int tipoDer = expresion_logica_simple();
+            if (tipoIzq == MatrizTipos.T_ERROR || tipoDer == MatrizTipos.T_ERROR) return MatrizTipos.T_ERROR;
+
+            int tipoResultante = MatrizTipos.verificar(operador.lexema, tipoIzq, tipoDer);
+            if (tipoResultante == MatrizTipos.T_ERROR) {
+                imprimirErrorSemantico("Operador '" + operador.lexema + "' no se puede aplicar a operandos de tipo '" + tipoAString(tipoIzq) + "' y '" + tipoAString(tipoDer) + "'", operador.renglon);
+                return MatrizTipos.T_ERROR;
+            }
+            tipoIzq = tipoResultante;
+        }
+        return tipoIzq;
+    }
+
+    private int expresion_logica_simple() {
+        if (p != null && p.token == 116) { // '!'
+            nodo operador = p;
+            p = p.sig;
+            int tipoExpr = expresion_logica_simple();
+            if (tipoExpr == MatrizTipos.T_ERROR) return MatrizTipos.T_ERROR;
+
+            int tipoResultante = MatrizTipos.verificar(operador.lexema, tipoExpr);
+            if(tipoResultante == MatrizTipos.T_ERROR){
+                imprimirErrorSemantico("Operador '!' solo se puede aplicar a operandos de tipo 'bool'", operador.renglon);
+                return MatrizTipos.T_ERROR;
+            }
+            return tipoResultante;
+
+        } else if (p != null && p.token == 119) { // '('
+            p = p.sig;
+            int tipo = expresion_logica();
+            if (p != null && p.token == 120) { // ')'
+                p = p.sig;
+            } else {
+                imprimirErrorSintactico(p, 511);
+            }
+            return tipo;
+        } else {
+            return expresion_comparacion();
+        }
+    }
+    
+    private int expresion_comparacion() {
+        int tipoIzq = expresion();
+        if (p != null && p.token >= 108 && p.token <= 113) {
+            nodo operador = p;
+            p = p.sig;
+            int tipoDer = expresion();
+            if (tipoIzq == MatrizTipos.T_ERROR || tipoDer == MatrizTipos.T_ERROR) return MatrizTipos.T_ERROR;
+            
+            int tipoResultante = MatrizTipos.verificar(operador.lexema, tipoIzq, tipoDer);
+             if (tipoResultante == MatrizTipos.T_ERROR) {
+                imprimirErrorSemantico("No se puede comparar '" + tipoAString(tipoIzq) + "' con '" + tipoAString(tipoDer) + "' usando el operador '"+ operador.lexema +"'", operador.renglon);
+                return MatrizTipos.T_ERROR;
+            }
+            return tipoResultante;
+        }
+        return tipoIzq;
+    }
+
     private void instruccionFmt() {
         p = p.sig;
-        if (p != null && p.token == 126) { //.
+        if (p != null && p.token == 126) {
             p = p.sig;
-            if(p != null){
-                if(p.token == 211){
+            if (p != null) {
+                if (p.token == 211) {
                     lectura();
-                }else if(p.token == 212){
+                } else if (p.token == 212) {
                     escritura();
-                }else{    
+                } else {
                     imprimirErrorSintactico(p, 518);
                 }
-            }else{
+            } else {
                 imprimirErrorSintactico(p, 518);
             }
-        }else{
+        } else {
             imprimirErrorSintactico(p, 517);
         }
     }
 
     private void lectura() {
         p = p.sig;
-        if (p != null && p.token == 119) { // (
+        if (p != null && p.token == 119) {
             p = p.sig;
-            if (p != null && p.token == 128) { // &
+            if (p != null && p.token == 128) {
                 p = p.sig;
-                if (p != null && p.token == 100 ) {  // identificador
-                    if (buscarVariable(p.lexema) == null) {
-                        System.out.println("Error Semantico 600: la variable '" + p.lexema + "' no ha sido declarada. Linea " + p.renglon);
-                        errorSintacticoEncontrado = true;
-                    }
+                if (p != null && p.token == 100) {
+                    verificarVariableNoDeclarada(p.lexema, p.renglon);
                     p = p.sig;
-                    if (p != null && p.token == 120){ // )
+                    if (p != null && p.token == 120) {
                         p = p.sig;
-                    }else{
-                        imprimirErrorSintactico(p, 511); 
+                    } else {
+                        imprimirErrorSintactico(p, 511);
                     }
-                }else{
-                    imprimirErrorSintactico(p, 515); 
+                } else {
+                    imprimirErrorSintactico(p, 515);
                 }
             } else {
                 imprimirErrorSintactico(p, 503);
@@ -316,131 +456,22 @@ public class sintactico {
 
     private void escritura() {
         p = p.sig;
-        if (p != null && p.token == 119) {  // '('
+        if (p != null && p.token == 119) {
             p = p.sig;
-            if (p != null && p.token != 120) {  
+            if (p != null && p.token != 120) {
                 expresion();
-                while (p != null && p.token == 123) {  // ','
+                while (p != null && p.token == 123) {
                     p = p.sig;
                     expresion();
-               }
+                }
             }
-            if (p != null && p.token == 120) {  // ')'
+            if (p != null && p.token == 120) {
                 p = p.sig;
             } else {
                 imprimirErrorSintactico(p, 511);
             }
         } else {
             imprimirErrorSintactico(p, 510);
-        }
-    }
-
-    private void if_else() {
-        p = p.sig;  
-        condicion();
-        
-        if (p != null && p.token == 121) { // '{'
-            p = p.sig;
-            instrucciones();
-            
-            if (p != null && p.token == 122) { // '}'
-                p = p.sig;
-                
-                if (p != null && p.token == 208) { // else
-                    p = p.sig;
-                    if (p != null && p.token == 121) { // '{'
-                        p = p.sig;
-                        instrucciones();
-                        if (p != null && p.token == 122) { // '}'
-                            p = p.sig;
-                        } else {
-                            imprimirErrorSintactico(p, 513); 
-                        }
-                    } else {
-                        imprimirErrorSintactico(p, 512); 
-                    }
-                }
-            } else {
-                imprimirErrorSintactico(p, 513);
-            }
-        } else {
-            imprimirErrorSintactico(p, 512); 
-        }
-    }
-
-    private void while_loop() {
-        p = p.sig; 
-        condicion();
-        if (p != null && p.token == 121) { // '{'
-            p = p.sig;
-            instrucciones();
-            if (p != null && p.token == 122) { // '}'
-                p = p.sig;
-            } else {
-                imprimirErrorSintactico(p, 513);  // '}'
-            }
-        } else {
-            imprimirErrorSintactico(p, 512);  // '{'
-        }
-    }
-
-    private void condicion() {
-        expresion_logica();
-    }
-
-    private void expresion_logica() {
-        expresion_logica_simple();
-        while (p != null && (p.token == 114 || p.token == 115)) {
-            p = p.sig;
-            expresion_logica_simple();
-        }
-    }
-
-    private void expresion_logica_simple() {
-        if (p != null && p.token == 116) { // '!'
-            p = p.sig;
-            expresion_logica_simple();
-        } else if (p != null && p.token == 119) { // '('
-            p = p.sig;
-            expresion_logica();
-            if (p != null && p.token == 120) { // ')'
-                p = p.sig;
-            } else {
-                imprimirErrorSintactico(p, 511);
-            }
-        } else {
-            if (esInicioDeComparacion()) {
-                expresion_comparacion();
-            } else if (p != null && (p.token == 100 || p.token == 213 || p.token == 214)) {
-                if (p.token == 100 && buscarVariable(p.lexema) == null) {
-                     System.out.println("Error Semantico 600: la variable '" + p.lexema + "' no ha sido declarada. Linea " + p.renglon);
-                     errorSintacticoEncontrado = true;
-                }
-                p = p.sig; 
-            } else {
-                imprimirErrorSintactico(p, 522);
-            }
-        }
-    }
-
-    private boolean esInicioDeComparacion() {
-        return (p != null && (p.token == 100 || p.token == 101 || p.token == 102 || 
-            p.token == 119 || p.token == 213 || p.token == 214));
-    }
-
-    private void expresion_comparacion() {
-        expresion_aritmetica();
-        if (p != null && p.token >= 108 && p.token <= 113) {  // Operadores relacionales
-            p = p.sig;
-            expresion_aritmetica();
-        }
-    }
-           
-    private void expresion_aritmetica() {
-        termino();
-        while (p != null && (p.token == 104 || p.token == 105)) { // + -
-            p = p.sig;
-            termino();
         }
     }
 }
