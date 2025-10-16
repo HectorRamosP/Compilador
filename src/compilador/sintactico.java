@@ -1,10 +1,14 @@
 package compilador;
 
+import java.util.ArrayList; 
+import java.util.List; 
+
 public class sintactico {
     private nodo p;
     private boolean errorEncontrado = false;
     private boolean errorSintacticoEncontrado = false;
     private nodoVar cabezaVar = null;
+    private List<String> polaca = new ArrayList<>();
 
     private String[][] errores = {
       {"se espera digito", "500"},
@@ -124,7 +128,7 @@ public class sintactico {
             case 102: return MatrizTipos.T_FLOAT64;
             case 103: return MatrizTipos.T_STRING;
             case 213: case 214: // true, false
-                return MatrizTipos.T_BOOL;
+                return MatrizTipos.T_BOOL; 
             default:
                 return MatrizTipos.T_ERROR;
         }
@@ -211,131 +215,156 @@ public class sintactico {
         }
     }
 
-    private void asignacion() {
-        int tipoVar = getTipoDeToken(p);
-        nodo varNode = p;
-        p = p.sig;
-        if (p != null && p.token == 127) { // '='
-            nodo opAsignacion = p;
-            p = p.sig;
-            int tipoExpr = expresion();
-            if (tipoVar != MatrizTipos.T_ERROR && tipoExpr != MatrizTipos.T_ERROR) {
-                int tipoFinal = MatrizTipos.verificar(opAsignacion.lexema, tipoVar, tipoExpr);
-                if (tipoFinal == MatrizTipos.T_ERROR) {
-                    String detalle = "No se puede asignar una expresion de tipo '" + tipoAString(tipoExpr) + "' a la variable '" + varNode.lexema + "' de tipo '" + tipoAString(tipoVar) + "'";
-                    imprimirErrorSemantico(detalle, varNode.renglon);
-                }
-            }
-        } else {
-            imprimirErrorSintactico(p, 502);
-        }
-    }
+   private void asignacion() {
+    polaca.add(p.lexema); // Agrega la variable a la lista
 
-    private int expresion() {
-        int tipoIzq = termino();
-        while (p != null && (p.token == 104 || p.token == 105)) { // + -
-            nodo operador = p;
-            p = p.sig;
-            int tipoDer = termino();
-            if (tipoIzq == MatrizTipos.T_ERROR || tipoDer == MatrizTipos.T_ERROR) return MatrizTipos.T_ERROR;
-            
-            int tipoResultante = MatrizTipos.verificar(operador.lexema, tipoIzq, tipoDer);
-            if (tipoResultante == MatrizTipos.T_ERROR) {
-                imprimirErrorSemantico("Operador '" + operador.lexema + "' no se puede aplicar a operandos de tipo '" + tipoAString(tipoIzq) + "' y '" + tipoAString(tipoDer) + "'", operador.renglon);
-                return MatrizTipos.T_ERROR;
+    int tipoVar = getTipoDeToken(p);
+    nodo varNode = p;
+    p = p.sig;
+    if (p != null && p.token == 127) { // '='
+        nodo opAsignacion = p;
+        p = p.sig;
+        int tipoExpr = expresion(); 
+        polaca.add(opAsignacion.lexema); // Agrega el operador de asignación
+
+        if (tipoVar != MatrizTipos.T_ERROR && tipoExpr != MatrizTipos.T_ERROR) {
+            int tipoFinal = MatrizTipos.verificar(opAsignacion.lexema, tipoVar, tipoExpr);
+            if (tipoFinal == MatrizTipos.T_ERROR) {
+                String detalle = "No se puede asignar una expresion de tipo '" + tipoAString(tipoExpr) + "' a la variable '" + varNode.lexema + "' de tipo '" + tipoAString(tipoVar) + "'";
+                imprimirErrorSemantico(detalle, varNode.renglon);
             }
-            tipoIzq = tipoResultante;
         }
-        return tipoIzq;
+    } else {
+        imprimirErrorSintactico(p, 502);
     }
+}
+
+   private int expresion() {
+    int tipoIzq = termino();
+    while (p != null && (p.token == 104 || p.token == 105)) { // + -
+        nodo operador = p;
+        p = p.sig;
+        int tipoDer = termino();
+        polaca.add(operador.lexema); //Agrega el operador a la lista
+
+        if (tipoIzq == MatrizTipos.T_ERROR || tipoDer == MatrizTipos.T_ERROR) return MatrizTipos.T_ERROR;
+        
+        int tipoResultante = MatrizTipos.verificar(operador.lexema, tipoIzq, tipoDer);
+        if (tipoResultante == MatrizTipos.T_ERROR) {
+            imprimirErrorSemantico("Operador '" + operador.lexema + "' no se puede aplicar a operandos de tipo '" + tipoAString(tipoIzq) + "' y '" + tipoAString(tipoDer) + "'", operador.renglon);
+            return MatrizTipos.T_ERROR;
+        }
+        tipoIzq = tipoResultante;
+    }
+    return tipoIzq;
+}
 
     private int termino() {
-        int tipoIzq = factor();
-        while (p != null && (p.token == 106 || p.token == 107)) { // * /
-            nodo operador = p;
-            p = p.sig;
-            int tipoDer = factor();
-            if (tipoIzq == MatrizTipos.T_ERROR || tipoDer == MatrizTipos.T_ERROR) return MatrizTipos.T_ERROR;
+    int tipoIzq = factor();
+    while (p != null && (p.token == 106 || p.token == 107)) { // "*" "/"
+        nodo operador = p;
+        p = p.sig;
+        int tipoDer = factor();
+        polaca.add(operador.lexema); // Añade el operador a la lista de polish
 
-            int tipoResultante = MatrizTipos.verificar(operador.lexema, tipoIzq, tipoDer);
-            if (tipoResultante == MatrizTipos.T_ERROR) {
-                imprimirErrorSemantico("Operador '" + operador.lexema + "' no se puede aplicar a operandos de tipo '" + tipoAString(tipoIzq) + "' y '" + tipoAString(tipoDer) + "'", operador.renglon);
-                return MatrizTipos.T_ERROR;
-            }
-            tipoIzq = tipoResultante;
+        if (tipoIzq == MatrizTipos.T_ERROR || tipoDer == MatrizTipos.T_ERROR) return MatrizTipos.T_ERROR;
+
+        int tipoResultante = MatrizTipos.verificar(operador.lexema, tipoIzq, tipoDer);
+        if (tipoResultante == MatrizTipos.T_ERROR) {
+            imprimirErrorSemantico("Operador '" + operador.lexema + "' no se puede aplicar a operandos de tipo '" + tipoAString(tipoIzq) + "' y '" + tipoAString(tipoDer) + "'", operador.renglon);
+            return MatrizTipos.T_ERROR;
         }
-        return tipoIzq;
+        tipoIzq = tipoResultante;
     }
+    return tipoIzq;
+}
 
     private int factor() {
-        if (p != null) {
-            if ((p.token >= 100 && p.token <= 103) || p.token == 213 || p.token == 214) {
-                int tipo = getTipoDeToken(p);
-                p = p.sig;
-                return tipo;
-            } else if (p.token == 119) { // '('
-                p = p.sig;
-                int tipo = expresion();
-                if (p != null && p.token == 120) {
-                    p = p.sig;
-                } else {
-                    imprimirErrorSintactico(p, 511);
-                }
-                return tipo;
-            } else {
-                imprimirErrorSintactico(p, 522);
-            }
-        } else {
-            imprimirErrorSintactico(null, 522);
-        }
-        return MatrizTipos.T_ERROR;
-    }
-
-    private void if_else() {
-        p = p.sig;
-        condicion();
-        if (p != null && p.token == 121) {
+    if (p != null) {
+        // si es digito, cadena, identificador, true o false
+        if ((p.token >= 100 && p.token <= 103) || p.token == 213 || p.token == 214) {
+            int tipo = getTipoDeToken(p);
+            polaca.add(p.lexema); // Añade el operador a la lista de polish
             p = p.sig;
-            instrucciones();
-            if (p != null && p.token == 122) {
+            return tipo;
+        } else if (p.token == 119) { // '('
+            p = p.sig;
+            int tipo = expresion();
+            if (p != null && p.token == 120) { // ')'
                 p = p.sig;
-                if (p != null && p.token == 208) {
+            } else {
+                imprimirErrorSintactico(p, 511); // espera )
+            }
+            return tipo;
+        } else {
+            imprimirErrorSintactico(p, 522);
+        }
+    } else {
+        imprimirErrorSintactico(null, 522);
+    }
+    return MatrizTipos.T_ERROR;
+}
+
+   private void if_else() {
+    p = p.sig; // consume 'if'
+    condicion(); // Procesa la condición
+
+    polaca.add("BRF"); 
+
+    if (p != null && p.token == 121) { // {
+        p = p.sig;
+        instrucciones(); // Cuerpo del 'if'
+        if (p != null && p.token == 122) { // }
+            p = p.sig;
+
+            if (p != null && p.token == 208) { // Si existe un 'else'
+                p = p.sig;
+                polaca.add("BRI"); 
+
+                if (p != null && p.token == 121) { // { del else
                     p = p.sig;
-                    if (p != null && p.token == 121) {
+                    instrucciones(); // Cuerpo del 'else'
+                    if (p != null && p.token == 122) { // } del else
                         p = p.sig;
-                        instrucciones();
-                        if (p != null && p.token == 122) {
-                            p = p.sig;
-                        } else {
-                            imprimirErrorSintactico(p, 513);
-                        }
                     } else {
-                        imprimirErrorSintactico(p, 512);
+                        imprimirErrorSintactico(p, 513);
                     }
+                } else {
+                    imprimirErrorSintactico(p, 512);
                 }
-            } else {
-                imprimirErrorSintactico(p, 513);
             }
         } else {
-            imprimirErrorSintactico(p, 512);
+            imprimirErrorSintactico(p, 513);
         }
+    } else {
+        imprimirErrorSintactico(p, 512);
     }
+}
+   
+   private void while_loop() {
+    p = p.sig; // consume 'while'
 
-    private void while_loop() {
+    // 1. Evaluar la condición
+    condicion();
+
+   
+    polaca.add("BRF");
+
+    if (p != null && p.token == 121) { // {
         p = p.sig;
-        condicion();
-        if (p != null && p.token == 121) {
+        instrucciones(); // 3. Ejecutar el cuerpo del bucle
+        if (p != null && p.token == 122) { // }
             p = p.sig;
-            instrucciones();
-            if (p != null && p.token == 122) {
-                p = p.sig;
-            } else {
-                imprimirErrorSintactico(p, 513);
-            }
+
+            polaca.add("BRI");
+
         } else {
-            imprimirErrorSintactico(p, 512);
+            imprimirErrorSintactico(p, 513);
         }
+    } else {
+        imprimirErrorSintactico(p, 512);
     }
+}
 
     private void condicion() {
         int tipoCond = expresion_logica();
@@ -345,69 +374,78 @@ public class sintactico {
         }
     }
     
-    private int expresion_logica() {
-        int tipoIzq = expresion_logica_simple();
-        while (p != null && (p.token == 114 || p.token == 115)) {
-            nodo operador = p;
-            p = p.sig;
-            int tipoDer = expresion_logica_simple();
-            if (tipoIzq == MatrizTipos.T_ERROR || tipoDer == MatrizTipos.T_ERROR) return MatrizTipos.T_ERROR;
+   private int expresion_logica() {
+    int tipoIzq = expresion_logica_simple();
+    while (p != null && (p.token == 114 || p.token == 115)) { // &&, ||
+        nodo operador = p;
+        p = p.sig;
+        int tipoDer = expresion_logica_simple();
+        
+        polaca.add(operador.lexema); // Agrega el operador lógico
 
-            int tipoResultante = MatrizTipos.verificar(operador.lexema, tipoIzq, tipoDer);
-            if (tipoResultante == MatrizTipos.T_ERROR) {
-                imprimirErrorSemantico("Operador '" + operador.lexema + "' no se puede aplicar a operandos de tipo '" + tipoAString(tipoIzq) + "' y '" + tipoAString(tipoDer) + "'", operador.renglon);
-                return MatrizTipos.T_ERROR;
-            }
-            tipoIzq = tipoResultante;
+        if (tipoIzq == MatrizTipos.T_ERROR || tipoDer == MatrizTipos.T_ERROR) return MatrizTipos.T_ERROR;
+
+        int tipoResultante = MatrizTipos.verificar(operador.lexema, tipoIzq, tipoDer);
+        if (tipoResultante == MatrizTipos.T_ERROR) {
+            imprimirErrorSemantico("Operador '" + operador.lexema + "' no se puede aplicar a operandos de tipo '" + tipoAString(tipoIzq) + "' y '" + tipoAString(tipoDer) + "'", operador.renglon);
+            return MatrizTipos.T_ERROR;
         }
-        return tipoIzq;
+        tipoIzq = tipoResultante;
     }
+    return tipoIzq;
+}
 
     private int expresion_logica_simple() {
-        if (p != null && p.token == 116) { // '!'
-            nodo operador = p;
-            p = p.sig;
-            int tipoExpr = expresion_logica_simple();
-            if (tipoExpr == MatrizTipos.T_ERROR) return MatrizTipos.T_ERROR;
+    if (p != null && p.token == 116) { // '!'
+        nodo operador = p;
+        p = p.sig;
+        int tipoExpr = expresion_logica_simple(); // Procesa el operando primero
+        
+        polaca.add(operador.lexema); //Agrega el '!' después del operando
 
-            int tipoResultante = MatrizTipos.verificar(operador.lexema, tipoExpr);
-            if(tipoResultante == MatrizTipos.T_ERROR){
-                imprimirErrorSemantico("Operador '!' solo se puede aplicar a operandos de tipo 'bool'", operador.renglon);
-                return MatrizTipos.T_ERROR;
-            }
-            return tipoResultante;
+        if (tipoExpr == MatrizTipos.T_ERROR) return MatrizTipos.T_ERROR;
 
-        } else if (p != null && p.token == 119) { // '('
+        int tipoResultante = MatrizTipos.verificar(operador.lexema, tipoExpr);
+        if(tipoResultante == MatrizTipos.T_ERROR){
+            imprimirErrorSemantico("Operador '!' solo se puede aplicar a operandos de tipo 'bool'", operador.renglon);
+            return MatrizTipos.T_ERROR;
+        }
+        return tipoResultante;
+    } 
+    else if (p != null && p.token == 119) { // '('
+        p = p.sig;
+        int tipo = expresion_logica();
+        if (p != null && p.token == 120) { // ')'
             p = p.sig;
-            int tipo = expresion_logica();
-            if (p != null && p.token == 120) { // ')'
-                p = p.sig;
-            } else {
-                imprimirErrorSintactico(p, 511);
-            }
-            return tipo;
         } else {
-            return expresion_comparacion();
+            imprimirErrorSintactico(p, 511);
         }
+        return tipo;
+    } else {
+        return expresion_comparacion();
     }
+}
     
-    private int expresion_comparacion() {
-        int tipoIzq = expresion();
-        if (p != null && p.token >= 108 && p.token <= 113) {
-            nodo operador = p;
-            p = p.sig;
-            int tipoDer = expresion();
-            if (tipoIzq == MatrizTipos.T_ERROR || tipoDer == MatrizTipos.T_ERROR) return MatrizTipos.T_ERROR;
-            
-            int tipoResultante = MatrizTipos.verificar(operador.lexema, tipoIzq, tipoDer);
-             if (tipoResultante == MatrizTipos.T_ERROR) {
-                imprimirErrorSemantico("No se puede comparar '" + tipoAString(tipoIzq) + "' con '" + tipoAString(tipoDer) + "' usando el operador '"+ operador.lexema +"'", operador.renglon);
-                return MatrizTipos.T_ERROR;
-            }
-            return tipoResultante;
-        }
-        return tipoIzq;
+   private int expresion_comparacion() {
+    int tipoIzq = expresion();
+    if (p != null && p.token >= 108 && p.token <= 113) {
+        nodo operador = p;
+        p = p.sig;
+        int tipoDer = expresion();
+        
+        polaca.add(operador.lexema); // Agrega el operador de comparación
+
+        if (tipoIzq == MatrizTipos.T_ERROR || tipoDer == MatrizTipos.T_ERROR) return MatrizTipos.T_ERROR;
+        
+        int tipoResultante = MatrizTipos.verificar(operador.lexema, tipoIzq, tipoDer);
+         if (tipoResultante == MatrizTipos.T_ERROR) {
+            imprimirErrorSemantico("No se puede comparar '" + tipoAString(tipoIzq) + "' con '" + tipoAString(tipoDer) + "' usando el operador '"+ operador.lexema +"'", operador.renglon);
+            return MatrizTipos.T_ERROR;
+         }
+         return tipoResultante;
     }
+    return tipoIzq;
+}
 
     private void instruccionFmt() {
         p = p.sig;
@@ -455,23 +493,33 @@ public class sintactico {
     }
 
     private void escritura() {
-        p = p.sig;
-        if (p != null && p.token == 119) {
+        p = p.sig; // Consume 'Println'
+        if (p != null && p.token == 119) { // (
             p = p.sig;
-            if (p != null && p.token != 120) {
-                expresion();
-                while (p != null && p.token == 123) {
-                    p = p.sig;
-                    expresion();
+            if (p != null && p.token != 120) { // Mientras no sea )
+                // Este bucle procesa múltiples argumentos para Println, como fmt.Println("Hola", variable)
+                while (true) {
+                    expresion(); // Procesa el argumento y lo añade a la pila polaca
+                    if (p != null && p.token == 123) { // Si hay una coma, viene otro argumento
+                        p = p.sig;
+                    } else {
+                        break; // No hay más argumentos
+                    }
                 }
             }
-            if (p != null && p.token == 120) {
+            if (p != null && p.token == 120) { // )
                 p = p.sig;
+                polaca.add("Println"); 
             } else {
-                imprimirErrorSintactico(p, 511);
+                imprimirErrorSintactico(p, 511); // Error: se esperaba ')'
             }
         } else {
-            imprimirErrorSintactico(p, 510);
+            imprimirErrorSintactico(p, 510); // Error: se esperaba '('
         }
     }
+    
+    public List<String> getPolaca() {
+    return this.polaca;
 }
+}
+

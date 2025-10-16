@@ -10,7 +10,7 @@ public class lexico {
     boolean errorEncontrado = false;
     boolean errorSintacticoEncontrado = false;
       
-    String archivo = "C:\\Users\\Hector\\Documents\\NetBeansProjects\\Compilador\\src\\compilador\\codigo.txt";
+    String archivo = "C:\\Users\\Usuario\\Documents\\NetBeansProjects\\Compilador\\src\\compilador\\codigo.txt";
       
     int[][] matriz = {
           //          l      d      "      +      -      *      /      =      !      <      >      &      |      [      ]      (      )      {      }      ,      ;      :      .     eb     rt    nl     tab    eof    oc
