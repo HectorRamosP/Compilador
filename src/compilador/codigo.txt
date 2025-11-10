@@ -1,35 +1,30 @@
 func main() {
-    var x float64
-    var a int
-    var y float64
-    var activo bool
-    var valido bool
-    var numero float64
-    var resultado int
-    var mensaje string
+    var x int
+    var y int
+    x = 10
+    y = 0
 
-   
-    a = 9
-
-    a = 7
-    y = 3.5 * 2.0
-
-    activo = true
-    valido = false
-
-    if activo && valido || !(x == 10) {
-        fmt.Println("Condición compuesta verdadera", numero)
+    if x == 10 {
+        fmt.Println("X es 10, entra al for")
+        
+        for y < 2 {
+            y = y + 1
+            fmt.Println("Vuelta Y")
+        }
+        
     } else {
-        fmt.Println("Condición compuesta falsa")
+        fmt.Println("X no es 10")
     }
 
-    for activo {
+    for x > 8 {
+        fmt.Println("Vuelta X")
+        
+        if y == 2 {
+            fmt.Println("Y es 2")
+        } else {
+            fmt.Println("Y no es 2")
+        }
+        
+        x = x - 1
     }
-
-    for x < 15 && y >= 7.0 {
-        fmt.Println("Iterando x:", x)
-        x = x + 1
-        y = y - 0.5
-    }
-    fmt.Println("Programa finalizado.")
 }

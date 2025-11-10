@@ -9,6 +9,8 @@ public class sintactico {
     private boolean errorSintacticoEncontrado = false;
     private nodoVar cabezaVar = null;
     private List<String> polaca = new ArrayList<>();
+    private int contadorIf = 0;        
+    private int contadorFor = 0;
 
     private String[][] errores = {
       {"se espera digito", "500"},
@@ -284,7 +286,7 @@ public class sintactico {
         // si es digito, cadena, identificador, true o false
         if ((p.token >= 100 && p.token <= 103) || p.token == 213 || p.token == 214) {
             int tipo = getTipoDeToken(p);
-            polaca.add(p.lexema); // Añade el operador a la lista de polish
+            polaca.add(p.lexema); // Lo añade a la lista de polish
             p = p.sig;
             return tipo;
         } else if (p.token == 119) { // '('
@@ -305,26 +307,32 @@ public class sintactico {
     return MatrizTipos.T_ERROR;
 }
 
-   private void if_else() {
-    p = p.sig; // consume 'if'
-    condicion(); // Procesa la condición
+private void if_else() {
+    p = p.sig; 
+    condicion();
 
-    polaca.add("BRF"); 
+    int numEtiqueta = ++contadorIf; 
+    String etiquetaA = "A" + numEtiqueta; 
+    String etiquetaB = "B" + numEtiqueta;
+
+    polaca.add("BRF-" + etiquetaA); 
 
     if (p != null && p.token == 121) { // {
         p = p.sig;
-        instrucciones(); // Cuerpo del 'if'
+        instrucciones(); 
         if (p != null && p.token == 122) { // }
             p = p.sig;
 
             if (p != null && p.token == 208) { // Si existe un 'else'
                 p = p.sig;
-                polaca.add("BRI"); 
+                polaca.add("BRI-" + etiquetaB); 
+                polaca.add(etiquetaA + ":");
 
-                if (p != null && p.token == 121) { // { del else
+                //ELSE
+                if (p != null && p.token == 121) { // {
                     p = p.sig;
-                    instrucciones(); // Cuerpo del 'else'
-                    if (p != null && p.token == 122) { // } del else
+                    instrucciones(); 
+                    if (p != null && p.token == 122) { // } 
                         p = p.sig;
                     } else {
                         imprimirErrorSintactico(p, 513);
@@ -332,6 +340,10 @@ public class sintactico {
                 } else {
                     imprimirErrorSintactico(p, 512);
                 }
+                polaca.add(etiquetaB + ":");
+            } else {
+               
+                polaca.add(etiquetaA + ":");
             }
         } else {
             imprimirErrorSintactico(p, 513);
@@ -341,22 +353,33 @@ public class sintactico {
     }
 }
    
-   private void while_loop() {
-    p = p.sig; // consume 'while'
+private void while_loop() {
+    p = p.sig; 
 
-    // 1. Evaluar la condición
-    condicion();
+    int numEtiqueta = ++contadorFor;
+    String etiquetaD = "D" + numEtiqueta;
+    String etiquetaC = "C" + numEtiqueta; 
+
+    
+    polaca.add(etiquetaD + ":");
 
    
-    polaca.add("BRF");
+    condicion();
+
+    
+    polaca.add("BRF-" + etiquetaC);
 
     if (p != null && p.token == 121) { // {
         p = p.sig;
-        instrucciones(); // 3. Ejecutar el cuerpo del bucle
+        instrucciones();
         if (p != null && p.token == 122) { // }
             p = p.sig;
 
-            polaca.add("BRI");
+           
+            polaca.add("BRI-" + etiquetaD);
+
+          
+            polaca.add(etiquetaC + ":");
 
         } else {
             imprimirErrorSintactico(p, 513);
