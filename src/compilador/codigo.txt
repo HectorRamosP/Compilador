@@ -1,30 +1,10 @@
 func main() {
     var x int
     var y int
-    x = 10
-    y = 0
+    x = 6
 
-    if x == 10 {
-        fmt.Println("X es 10, entra al for")
-        
-        for y < 2 {
-            y = y + 1
-            fmt.Println("Vuelta Y")
-        }
-        
-    } else {
-        fmt.Println("X no es 10")
-    }
-
-    for x > 8 {
-        fmt.Println("Vuelta X")
-        
-        if y == 2 {
-            fmt.Println("Y es 2")
-        } else {
-            fmt.Println("Y no es 2")
-        }
-        
+    for x > 3 {
+        fmt.Scanln("Vuelta X") 
         x = x - 1
     }
 }

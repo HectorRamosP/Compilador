@@ -490,28 +490,29 @@ private void while_loop() {
         }
     }
 
-    private void lectura() {
-        p = p.sig;
-        if (p != null && p.token == 119) {
+     private void lectura() {
+        p = p.sig; // Consume 'Scanln'
+        if (p != null && p.token == 119) { // (
             p = p.sig;
-            if (p != null && p.token == 128) {
-                p = p.sig;
-                if (p != null && p.token == 100) {
-                    verificarVariableNoDeclarada(p.lexema, p.renglon);
-                    p = p.sig;
-                    if (p != null && p.token == 120) {
+            if (p != null && p.token != 120) { // Mientras no sea )
+                // Este bucle procesa múltiples argumentos para Scanln, como fmt.Scanln("Texto", variable)
+                while (true) {
+                    expresion(); // Procesa el argumento y lo añade a la pila polaca
+                    if (p != null && p.token == 123) { // Si hay una coma, viene otro argumento
                         p = p.sig;
                     } else {
-                        imprimirErrorSintactico(p, 511);
+                        break; // No hay más argumentos
                     }
-                } else {
-                    imprimirErrorSintactico(p, 515);
                 }
+            }
+            if (p != null && p.token == 120) { // )
+                p = p.sig;
+                polaca.add("Scanln"); 
             } else {
-                imprimirErrorSintactico(p, 503);
+                imprimirErrorSintactico(p, 511); // Error: se esperaba ')'
             }
         } else {
-            imprimirErrorSintactico(p, 510);
+            imprimirErrorSintactico(p, 510); // Error: se esperaba '('
         }
     }
 
