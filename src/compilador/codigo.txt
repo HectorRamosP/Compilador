@@ -1,10 +1,17 @@
 func main() {
     var x int
     var y int
-    x = 6
-
-    for x > 3 {
-        fmt.Scanln("Vuelta X") 
-        x = x - 1
-    }
+    var resultado int
+    var resultadoFloat float64
+    
+    x = 5
+    y = 10
+    
+    resultado = x * 2
+    resultado = y * 0
+    resultado = x * 1
+    resultado = 2 * 0
+    resultado = 2 * 2
+    
+    resultadoFloat = y / 1
 }
