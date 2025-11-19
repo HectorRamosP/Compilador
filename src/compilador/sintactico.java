@@ -331,19 +331,35 @@ public class sintactico {
             switch (tokenOperador) {
                 case 106: {
                     // "*"
-                    int valor = obtenerValorConstante(operandoDer, tipoDer);
-                    if (valor == 2) {
+                    int valorDer = obtenerValorConstante(operandoDer, tipoDer);
+                    int valorIzq = obtenerValorConstante(operandoIzq, tipoIzq);
+
+                    if (valorDer == 2) {
                         polaca.remove(polaca.size() - 1);
                         polaca.add(operandoIzq);
                         polaca.add("+");
-                    } else if (valor == 0) {
+                    } else if (valorDer == 0) {
                         polaca.remove(polaca.size() - 1);
                         if (!polaca.isEmpty()) {
                             polaca.remove(polaca.size() - 1);
                         }
                         polaca.add("0");
-                    } else if (valor == 1) {
+                    } else if (valorDer == 1) {
                         polaca.remove(polaca.size() - 1);
+                    } else if (valorIzq == 2) {
+                        polaca.remove(polaca.size() - 1);
+                        polaca.remove(polaca.size() - 1);
+                        polaca.add(operandoDer);
+                        polaca.add(operandoDer);
+                        polaca.add("+");
+                    } else if (valorIzq == 0) {
+                        polaca.remove(polaca.size() - 1);
+                        polaca.remove(polaca.size() - 1);
+                        polaca.add("0");
+                    } else if (valorIzq == 1) {
+                        polaca.remove(polaca.size() - 1);
+                        polaca.remove(polaca.size() - 1);
+                        polaca.add(operandoDer);
                     } else {
                         polaca.add(operadorString);
                     }
